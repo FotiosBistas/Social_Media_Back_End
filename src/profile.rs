@@ -33,7 +33,7 @@ impl Profile {
         return self.uid;
     }
     
-    pub fn equals(&self, other: Profile) -> bool {
+    pub fn equals(&self, other: &Profile) -> bool {
         return self.uid == other.get_uid();
     }
 }
