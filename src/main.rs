@@ -1,6 +1,8 @@
-mod config;
-mod profile;
+mod profile; 
+
+
 
 fn main() {
-    println!("Hello, world!");
+    let prof = profile::Profile::new("Fotis","1234");
+    println!("{}",prof);
 }

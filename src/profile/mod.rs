@@ -1,4 +1,6 @@
-use crate::config;
+mod config;
+//using nested path 
+use std::{fmt,result}; 
 /**
 
     A simple profile structure to hold all information
@@ -6,9 +8,10 @@ use crate::config;
 
 */
 pub struct Profile {
-    pub uid: u32,
-    pub username: String,
-    pub password: String
+    //since we are implementing getters we can leave this to private 
+    uid: u32,
+    username: String,
+    password: String
 }
 
 impl Profile {
@@ -21,10 +24,6 @@ impl Profile {
         };
     }
 
-    pub fn to_string(&self) -> String {
-        return format!("Profile [{}, {}, {}]", self.uid, self.username, self.password);
-    }
-
     pub fn get_username(&self) -> String {
         return self.username.clone();
     }
@@ -35,5 +34,16 @@ impl Profile {
     
     pub fn equals(&self, other: &Profile) -> bool {
         return self.uid == other.get_uid();
+    }
+}
+
+/*
+to string method for profile needs to implement trait Display 
+*/
+impl fmt::Display for Profile{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> result::Result<(),fmt::Error>{
+        // use write! macro just like println! macro, but output gets writen to
+        // the formatter struct.
+        write!(fmt,"{}-> uid, {} -> username,{} -> password",self.uid,self.username,self.password)
     }
 }
