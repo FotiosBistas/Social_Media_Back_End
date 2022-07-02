@@ -1,3 +1,13 @@
+mod profile; 
+
+
+
 fn main() {
-    println!("Hello, world!");
+    let prof = profile::Profile::new("Fotis","1234");
+    println!("{}",prof);
+}
+
+
+fn return_int() -> i32{
+    432 
 }
