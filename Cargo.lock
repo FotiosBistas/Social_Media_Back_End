@@ -3,5 +3,9 @@
 version = 3
 
 [[package]]
-name = "Social_Media_Back_End"
+name = "Client"
+version = "0.1.0"
+
+[[package]]
+name = "Server"
 version = "0.1.0"
