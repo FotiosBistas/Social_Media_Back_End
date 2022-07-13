@@ -2,6 +2,6 @@
 [workspace]
 
 members = [
-    "Client",
-    "Server"
+    "client",
+    "server"
 ]
