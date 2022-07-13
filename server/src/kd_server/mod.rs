@@ -1,5 +1,5 @@
 
-use crate::Server::server_struct; 
+use crate::server_struct::Server;
 
 pub mod operations {
     
