@@ -5,8 +5,9 @@ use std::io;
 ///
 /// Client calls method from this module to interact with the server
 pub mod operations{
-
-    use super::*; 
+    use std::io::Write;
+    use std::net::TcpStream;
+    use super::*;
 
 
     pub fn signup(prof: &Profile){
@@ -14,7 +15,12 @@ pub mod operations{
     }
 
     pub fn login(prof: &Profile){
-        println!("Trying to log in")
+
+        println!("Trying to log in");
+        let mut stream = TcpStream::connect("127.0.0.1:7878");
+
+        stream.unwrap().write(b"hi there");
+
     }
 
     ///This function accepts the client who made the request. 
