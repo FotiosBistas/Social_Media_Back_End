@@ -1,14 +1,11 @@
 pub struct Config{
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
 }
 
 
 impl Config {
-    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &str>{
-        if args.len() < 2 {
-            panic!("Less than two arguments received");
-        }
+    pub fn new(mut args: impl Iterator<Item = String>) -> Result<Config, &'static str>{
 
         args.next();
 
