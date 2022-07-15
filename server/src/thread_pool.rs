@@ -37,7 +37,6 @@ impl ThreadPool{
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
-
         for _ in &self.workers{
             self.sender.send(Message::Terminate).unwrap();
         }
@@ -72,14 +71,15 @@ impl Worker {
         let thread = thread::spawn(move || loop{
             let message = receiver.lock().unwrap().recv().unwrap();
 
-            println!("Worker {} got a job; executing",id);
+            println!("Worker {} got a message; executing",id);
 
             match message {
                 Message::Execute(job) => {
-                    println!("Worker {} got a job; executing",id);
-                    job;
+                    println!("Found a job to execute");
+                    job();
                 },
                 Message::Terminate => {
+                    println!("Terminating worker: {}", id);
                     break;
                 }
             }
