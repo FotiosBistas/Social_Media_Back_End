@@ -1,18 +1,19 @@
 use std::thread::{JoinHandle, Thread};
 use std::sync::{mpsc, Arc, Mutex};
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 
 
 pub struct ThreadPool{
     workers: Vec<Worker>,
-    sender: mpsc::channel(Message),
+    sender: mpsc::Sender<Message>,
 }
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 enum Message{
     Execute(Job),
-    Fail,
+    Terminate,
 }
 
 impl ThreadPool{
@@ -44,17 +45,17 @@ impl Drop for ThreadPool {
         for worker in &mut self.workers{
             println!("Shutting down worker {}",worker.id);
 
-            if let Some(handle) = worker.handle.take() {
+            if let Some(handle) = worker.thread.take() {
                 handle.join().unwrap();
             };
         }
     }
 }
 
-impl<F> ThreadPool
-    where F: FnOnce() + 'static + Send
-{
-    pub fn execute(&self,closure: F){
+impl ThreadPool {
+    pub fn execute<F>(&self, closure: F)
+        where F: FnOnce() + 'static + Send
+    {
         let job = Box::new(closure);
         self.sender.send(Message::Execute(job)).unwrap();
     }
@@ -67,14 +68,14 @@ struct Worker{
 }
 
 impl Worker {
-    fn new(id:usize,receiver: Arc<Mutex<mpsc::receiver<Message>>>) -> Worker{
+    fn new(id:usize,receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker{
         let thread = thread::spawn(move || loop{
             let message = receiver.lock().unwrap().recv().unwrap();
 
             println!("Worker {} got a job; executing",id);
 
             match message {
-                Message::NewJob(job) => {
+                Message::Execute(job) => {
                     println!("Worker {} got a job; executing",id);
                     job;
                 },
