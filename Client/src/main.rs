@@ -1,11 +1,21 @@
-use std::io;
+use std::{env,io,process};
+use crate::config::Config;
+use crate::profile::Profile;
+
 mod config;
 mod profile;
 mod kd_client;
 
+
+
 fn main() {
 
+    let config = Config::new(env::args()).unwrap_or_else(|err|{
+        eprintln!("Problem parsing arguments: {}", err);
+        process::exit(1);
+    });
 
+    let prof = Profile::new(&config.username, &config.password);
     loop{
         println!("Options:");
 
