@@ -36,10 +36,14 @@ fn main() {
 
         match option {
             1 => {
-                kd_client::operations::signup(&prof);
+                kd_client::operations::signup(&prof).unwrap_or_else(|err|{
+                    eprintln!("An error occurred while trying to sign up: {}",err);
+                });
             },
             2 => {
-                kd_client::operations::login(&prof);
+                kd_client::operations::login(&prof).unwrap_or_else(|err|{
+                    eprintln!("An error occurred while trying to login: {}",err);
+                });
             },
             _ | 0 => {break;}
 
