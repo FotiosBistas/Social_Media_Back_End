@@ -14,7 +14,7 @@ fn main(){
 
 
     //handle error 
-    let tcp_listener = match TcpListener::bind("127.0.0.1:178"){
+    let tcp_listener = match TcpListener::bind("127.0.0.1:7878"){
         Ok(listener) => listener,
         Err(error) => {
             panic!("Could not bind tcp listener: {}",error);
@@ -26,8 +26,10 @@ fn main(){
     for stream in tcp_listener{
         let stream = stream.expect("failed");
 
-        pool.execute(|| {operations::handle_connection(stream)});
+        pool.execute(|| {
+            operations::handle_connection(stream);
+        });
 
     }
-
+    println!("Exiting main");
 }
