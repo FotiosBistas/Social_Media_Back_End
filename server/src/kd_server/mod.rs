@@ -3,6 +3,7 @@ use crate::server_struct::Server;
 
 pub mod operations {
     use std::io;
+    use std::str;
     use std::io::{Error, Read};
     use std::net::TcpStream;
     use super::*;
@@ -30,12 +31,33 @@ pub mod operations {
         let mut buffer = buffer.split_at(index);
         let mut buffer = buffer.0.split(|x|*x == 32);
 
-        let request = buffer.next();
-        let uid = buffer.next();
-        let username = buffer.next();
-        let password = buffer.next();
+        let request = buffer.next().unwrap();
+        let uid = buffer.next().unwrap();
+        let username = buffer.next().unwrap();
+        let password = buffer.next().unwrap() ;
 
-        println!("Request: {:?}, uid: {:?}, username: {:?}, password: {:?}",request,uid,username,password);
+        let request = match str::from_utf8(request) {
+            Ok(v) => v,
+            Err(e) => return Err("Invalid UTF-8 sequence"),
+        };
+
+        let uid = match str::from_utf8(uid) {
+            Ok(v) => v,
+            Err(e) => return Err("Invalid UTF-8 sequence"),
+        };
+
+        let username = match str::from_utf8(username) {
+            Ok(v) => v,
+            Err(e) => return Err("Invalid UTF-8 sequence"),
+        };
+
+        let password = match str::from_utf8(password) {
+            Ok(v) => v,
+            Err(e) => return Err("Invalid UTF-8 sequence"),
+        };
+
+
+        println!("Request: {}, uid: {}, username: {}, password: {}",request,uid,username,password);
 
         Ok(())
 
