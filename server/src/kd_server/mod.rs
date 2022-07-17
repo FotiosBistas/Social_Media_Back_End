@@ -16,7 +16,7 @@ pub mod operations {
 
     }
 
-    pub fn handle_connection(mut stream: TcpStream) -> Result<(),&'static str>{
+    pub fn handle_connection(mut stream: &TcpStream) -> Result<(),&'static str>{
         println!("Connection started");
         let mut buffer = [0;1024];
         let n = match stream.read(& mut buffer[..]){
@@ -57,7 +57,7 @@ pub mod operations {
         };
 
 
-        println!("Request: {}, uid: {}, username: {}, password: {}",request,uid,username,password);
+        println!("Welcome client {}",uid);
 
         Ok(())
 

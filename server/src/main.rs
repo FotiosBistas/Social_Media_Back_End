@@ -3,6 +3,7 @@ mod kd_server;
 mod server_struct;
 
 use std::{net::TcpListener, io::Error, thread};
+use std::net::Shutdown;
 use crate::thread_pool::ThreadPool;
 use crate::kd_server::operations;
 
@@ -26,8 +27,11 @@ fn main(){
     for stream in tcp_listener{
         let stream = stream.expect("failed");
 
-        pool.execute(|| {
-            operations::handle_connection(stream);
+        pool.execute(move || {
+            operations::handle_connection(&stream).unwrap_or_else(|err|{
+                println!("Error handling connection: {}", err);
+                stream.shutdown(Shutdown::Both).expect("Couldn't shutdown stream");
+            });
         });
 
     }
