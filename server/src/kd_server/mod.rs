@@ -2,7 +2,8 @@
 use crate::server_struct::Server;
 
 pub mod operations {
-    use std::io::Read;
+    use std::io;
+    use std::io::{Error, Read};
     use std::net::TcpStream;
     use super::*;
 
@@ -14,11 +15,29 @@ pub mod operations {
 
     }
 
-    pub fn handle_connection(mut stream: TcpStream){
+    pub fn handle_connection(mut stream: TcpStream) -> Result<(),&'static str>{
         println!("Connection started");
-        let mut buffer = [0;10];
-        let n = stream.read(& mut buffer[..]).unwrap();
+        let mut buffer = [0;1024];
+        let n = match stream.read(& mut buffer[..]){
+            Ok(n) => n,
+            _ => return Err("Error trying to read from buffer"),
+        };
 
-        println!("Bytes read: {:?}", &buffer[..]);
+        println!("Read {} bytes from buffer.",n);
+
+        //first part of the array not containing junk data
+        let index = buffer.iter().position(|x| *x == 10).unwrap();
+        let mut buffer = buffer.split_at(index);
+        let mut buffer = buffer.0.split(|x|*x == 32);
+
+        let request = buffer.next();
+        let uid = buffer.next();
+        let username = buffer.next();
+        let password = buffer.next();
+
+        println!("Request: {:?}, uid: {:?}, username: {:?}, password: {:?}",request,uid,username,password);
+
+        Ok(())
+
     }
 } 

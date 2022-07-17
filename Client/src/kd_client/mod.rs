@@ -24,11 +24,25 @@ pub mod operations{
             _ => return Err("Could not connect to tcp stream")
         };
 
-        let mut login = b"log in";
 
+        let uid = &prof.get_uid().to_string();
+        let username = prof.get_username() ;
+        let password = prof.get_password();
+        let request = "login";
+        let mut login = String::with_capacity(request.len() + uid.len() + username.len() + password.len() + 4);
 
+        login.insert_str(login.len(), request);
+        login.insert(login.len(),' ');
+        login.insert_str(login.len(), uid);
+        login.insert(login.len(),' ');
+        login.insert_str(login.len(),username);
+        login.insert(login.len(),' ');
+        login.insert_str(login.len(),password);
+        login.insert(login.len(),'\n');
 
-        match stream.write(b"log in\n") {
+        let login = login.as_bytes();
+
+        match stream.write(login) {
             Ok(_) => {}
             _ => return Err("Error trying to write to TCP stream"),
         }
