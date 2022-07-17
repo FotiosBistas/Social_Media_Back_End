@@ -24,8 +24,12 @@ impl Profile {
         };
     }
 
-    pub fn get_username(&self) -> String {
-        return self.username.clone();
+    pub fn get_username(&self) -> &str {
+        return &self.username;
+    }
+
+    pub fn get_password(&self) -> &str {
+        return &self.password;
     }
 
     pub fn get_uid(&self) -> u32 {
