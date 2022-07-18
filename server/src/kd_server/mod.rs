@@ -4,7 +4,7 @@ use crate::server_struct::Server;
 pub mod operations {
     use std::io;
     use std::str;
-    use std::io::{Error, Read};
+    use std::io::{Error, Read, Write};
     use std::net::TcpStream;
     use super::*;
 
@@ -58,6 +58,8 @@ pub mod operations {
 
 
         println!("Welcome client {}",uid);
+
+
 
         Ok(())
 
