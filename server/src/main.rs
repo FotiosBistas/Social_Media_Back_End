@@ -22,18 +22,19 @@ fn main(){
         }
     };
 
-    let tcp_listener = tcp_listener.incoming();
 
-    for stream in tcp_listener{
-        let stream = stream.expect("failed");
-
-        pool.execute(move || {
-            operations::handle_connection(&stream).unwrap_or_else(|err|{
-                println!("Error handling connection: {}", err);
-                stream.shutdown(Shutdown::Both).expect("Couldn't shutdown stream");
-            });
-        });
-
+    for stream in tcp_listener.incoming(){
+        match stream{
+            Ok(stream) => {
+                pool.execute(move || {
+                    operations::handle_connection(&stream).unwrap_or_else(|err|{
+                        eprintln!("Error handling connection: {}", err);
+                        stream.shutdown(Shutdown::Both).expect("Couldn't shutdown stream");
+                    });
+                });
+            }
+            Err(e) => println!("Error {} occurred trying to establish connection",e),
+        };
     }
     println!("Exiting main");
 }
