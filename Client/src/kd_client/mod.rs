@@ -1,16 +1,19 @@
 
 use crate::profile::Profile; 
-use std::io;
+use std::{io, ops};
 
-///Request encapsulates who sends the request and the request type.
+///Request encapsulates who sends the request and the request type. (profile, request_type)
 struct Request<'a>(&'a Profile, RequestType);
 ///Request type specifies what type of request is sent to the server.
 pub enum RequestType{
     Login,
     SignUp,
 }
+
+
+
 ///
-/// Client calls method from this module to interact with the server
+/// Client calls methods from this module to interact with the server
 pub mod operations{
     use std::io::{Read, Sink, Write};
     use std::net::TcpStream;
@@ -20,38 +23,27 @@ pub mod operations{
     mod helper_methods {
         use super::*;
 
-        fn create_request(request: &str,prof: &Profile) -> &[u8] {
-            let prof = prof;
+
+        pub(crate) fn send_request(mut stream: TcpStream, request: Request) -> Result<(), &'static str> {
+            let request_type = request.1;
+            let prof = request.0;
             let uid = &prof.get_uid().to_string();
             let username = prof.get_username();
             let password = prof.get_password();
 
-            let mut buffer = String::with_capacity(request.len() + uid.len() + username.len() + password.len() + 4);
-
-            buffer.insert_str(login.len(), request);
-            buffer.insert(login.len(), ' ');
-            buffer.insert_str(login.len(), uid);
-            buffer.insert(login.len(), ' ');
-            buffer.insert_str(login.len(), username);
-            buffer.insert(login.len(), ' ');
-            buffer.insert_str(login.len(), password);
-            buffer.insert(login.len(), '\n');
-
-            let buffer = buffer.as_bytes();
-            &buffer
-        }
-
-        pub(crate) fn send_request(mut stream: TcpStream, request: Request) -> Result<(), &'static str> {
-            let request_type = request.1;
             match request_type {
                 Login => {
-                    match stream.write(create_request("login",request.0)) {
+                    let req = "login";
+                    let req = &format!("{} {} {} {}{}",req,uid,username,password,'\n');
+                    match stream.write(req.as_bytes()) {
                         Ok(_) => {}
                         _ => return Err("Error trying to write login request to TCP stream"),
                     }
                 }
                 SignUp => {
-                    match stream.write(create_request("signup",request.0)) {
+                    let req = "signup";
+                    let req = &format!("{} {} {} {}{}",req,uid,username,password,'\n');
+                    match stream.write(req.as_bytes()) {
                         Ok(_) => {}
                         _ => return Err("Error trying to write signup request to TCP stream"),
                     }
