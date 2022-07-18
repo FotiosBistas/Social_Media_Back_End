@@ -2,15 +2,63 @@
 use crate::profile::Profile; 
 use std::io;
 
+
+enum RequestType{
+    Login,
+    SignUp,
+}
 ///
 /// Client calls method from this module to interact with the server
 pub mod operations{
     use std::io::{Read, Write};
     use std::net::TcpStream;
+    use crate::kd_client::RequestType::Login;
     use super::*;
 
+    pub fn send_request(prof:&Profile,request_type:RequestType) -> Result<(),&'static str>{
+
+        let uid = &prof.get_uid().to_string();
+        let username = prof.get_username() ;
+        let password = prof.get_password();
+
+        match request_type {
+            Login => {
+                let request = "login";
+                let mut login = String::with_capacity(request.len() + uid.len() + username.len() + password.len() + 4);
+
+                login.insert_str(login.len(), request);
+                login.insert(login.len(),' ');
+                login.insert_str(login.len(), uid);
+                login.insert(login.len(),' ');
+                login.insert_str(login.len(),username);
+                login.insert(login.len(),' ');
+                login.insert_str(login.len(),password);
+                login.insert(login.len(),'\n');
+
+                let login = login.as_bytes();
+                match stream.write(login) {
+                    Ok(_) => {}
+                    _ => return Err("Error trying to write login request to TCP stream"),
+                }
+            }
+            SignUp => {
+
+            }
+        }
+        Ok(())
+    }
 
     pub fn signup(prof: &Profile) -> Result<(),&'static str>{
+
+        println!("Trying to sign up");
+
+        match  send_request(prof,Login){
+            Ok(_) => {}
+            Err(e) => {
+                return Err("")
+            }
+        };
+
         Ok(())
     }
 
@@ -25,27 +73,8 @@ pub mod operations{
         };
 
 
-        let uid = &prof.get_uid().to_string();
-        let username = prof.get_username() ;
-        let password = prof.get_password();
-        let request = "login";
-        let mut login = String::with_capacity(request.len() + uid.len() + username.len() + password.len() + 4);
 
-        login.insert_str(login.len(), request);
-        login.insert(login.len(),' ');
-        login.insert_str(login.len(), uid);
-        login.insert(login.len(),' ');
-        login.insert_str(login.len(),username);
-        login.insert(login.len(),' ');
-        login.insert_str(login.len(),password);
-        login.insert(login.len(),'\n');
 
-        let login = login.as_bytes();
-
-        match stream.write(login) {
-            Ok(_) => {}
-            _ => return Err("Error trying to write to TCP stream"),
-        }
 
         let n = match stream.read(&mut buffer){
             Ok(n) => n,
@@ -54,6 +83,7 @@ pub mod operations{
 
         println!("Read {} bytes from server.",n);
 
+        println!("{:?}",buffer);
 
         Ok(())
     }
