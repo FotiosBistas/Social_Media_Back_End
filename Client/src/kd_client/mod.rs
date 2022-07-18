@@ -3,7 +3,7 @@ use crate::profile::Profile;
 use std::io;
 
 
-enum RequestType{
+pub enum RequestType{
     Login,
     SignUp,
 }
@@ -12,10 +12,10 @@ enum RequestType{
 pub mod operations{
     use std::io::{Read, Write};
     use std::net::TcpStream;
-    use crate::kd_client::RequestType::Login;
+    use crate::kd_client::RequestType::{Login, SignUp};
     use super::*;
 
-    pub fn send_request(prof:&Profile,request_type:RequestType) -> Result<(),&'static str>{
+    pub fn send_request(mut stream: TcpStream, prof:&Profile, request_type:RequestType) -> Result<(),&'static str>{
 
         let uid = &prof.get_uid().to_string();
         let username = prof.get_username() ;
@@ -52,10 +52,16 @@ pub mod operations{
 
         println!("Trying to sign up");
 
-        match  send_request(prof,Login){
+
+        let stream = match TcpStream::connect("127.0.0.1:7878"){
+            Ok(stream) => stream,
+            _ => return Err("Could not connect to tcp stream")
+        };
+
+        match  send_request(stream,prof,SignUp){
             Ok(_) => {}
             Err(e) => {
-                return Err("")
+                return Err(e)
             }
         };
 
@@ -66,24 +72,18 @@ pub mod operations{
 
         println!("Trying to log in");
 
-        let mut buffer = [0;1024];
-        let mut stream = match TcpStream::connect("127.0.0.1:7878"){
+        let stream = match TcpStream::connect("127.0.0.1:7878"){
             Ok(stream) => stream,
             _ => return Err("Could not connect to tcp stream")
         };
 
-
-
-
-
-        let n = match stream.read(&mut buffer){
-            Ok(n) => n,
-            _ => return Err("Error trying to read from buffer"),
+        match send_request(stream,prof,Login){
+            Ok(_) => {}
+            Err(e) => {
+                return Err(e)
+            }
         };
 
-        println!("Read {} bytes from server.",n);
-
-        println!("{:?}",buffer);
 
         Ok(())
     }
