@@ -1,6 +1,6 @@
 
 use crate::profile::Profile; 
-use std::{io, ops};
+use std::{io};
 
 ///Request encapsulates who sends the request and the request type. (profile, request_type)
 struct Request<'a>(&'a Profile, RequestType);
@@ -15,7 +15,9 @@ pub enum RequestType{
 ///
 /// Client calls methods from this module to interact with the server
 pub mod operations{
-    use std::io::{Read, Sink, Write};
+    use std::error::Error;
+    use std::fs::{self, File};
+    use std::io::{Read, Sink, Write, ErrorKind};
     use std::net::TcpStream;
     use crate::kd_client::RequestType::{Login, SignUp};
     use super::*;
@@ -108,5 +110,26 @@ pub mod operations{
         Ok(()) 
     }
 
+    
+    ///Read file reads a specific file given as a name using the id of the client.
+    ///Example: Profile_Xclient1
+    fn read_local_file(prof: &Profile) -> Result<&static str, dyn Error> {
 
+        let filename = &format!("Profile_Xclient{}",prof.get_uid());
+
+        //if file doesn't exist create it else return the contents
+        let contents = match fs::read_to_string(filename){
+            Err(E) => match E.kind(){
+                ErrorKind::NotFound => match File::create(filename) {
+                    Ok(file) => file,
+                    Err(e) => return Err(e),
+                },
+                other_error => return Err(other_error),
+            },
+            Ok(contents) => return Ok(&contents),
+        };
+        //if the function hasn't returned already it means it created the file
+        let contents = fs::read_to_string(contents);
+        Ok(&contents.unwrap())
+    }
 } 
