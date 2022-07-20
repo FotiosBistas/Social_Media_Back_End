@@ -26,6 +26,26 @@ pub mod operations{
     mod helper_methods {
         use super::*;
 
+        ///Open the local file and return it.
+        ///Must accept the a profile instance and a file_type = Others or Profile to create the filename.
+        ///Example: Profile_Xclient1 or Others_Xclient1
+        fn open_local_file(prof: &Profile,file_type:&str) -> Result<File, Box<dyn Error>> {
+
+            let filename = &format!("{}{}",file_type,prof.get_uid());
+
+            //if file doesn't exist create it else return the file
+            let file = match File::open(filename){
+                Err(E) => match E.kind(){
+                    ErrorKind::NotFound => match File::create(filename) {
+                        Ok(file) => file,
+                        Err(e) => return Err(Box::new(e)),
+                    },
+                    other_error => return Err(Box::new(E)),
+                },
+                Ok(file) => return Ok(file),
+            };
+            Ok(file)
+        }
 
         pub(crate) fn send_request(mut stream: TcpStream, request: Request) -> Result<(), &'static str> {
             let request_type = request.1;
@@ -112,28 +132,5 @@ pub mod operations{
     }
 
 
-    ///Read file reads a specific file given as a name using the id of the client.
-    ///Must accept the a profile instance and a file_type = Others or Profile
-    ///Example: Profile_Xclient1 or Others_Xclient1
-    fn read_local_file(prof: &Profile,file_type:&str) -> Result<&'static str, Box<dyn Error>> {
-
-        let filename = &format!("{}{}",file_type,prof.get_uid());
-
-        //if file doesn't exist create it else return the contents
-        let mut contents = match fs::read_to_string(filename){
-            Err(E) => match E.kind(){
-                ErrorKind::NotFound => match File::create(filename) {
-                    Ok(file) => file,
-                    Err(e) => return Err(Box::new(e)),
-                },
-                other_error => return Err(Box::new(E)),
-            },
-            Ok(contents) => return Ok(&contents),
-        };
-        //if the function hasn't returned already it means it created the file
-        let mut buffer = String::new();
-        let contents = contents.read_to_string(&mut buffer);
-        Ok(&buffer.clone())
-    }
 
 } 
