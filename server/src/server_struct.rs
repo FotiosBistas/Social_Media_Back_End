@@ -6,12 +6,8 @@ use std::sync::{Arc, Mutex};
 
 pub struct Server<'a>{
     //active connections in the server
-    catalog: Arc<Mutex<Vec<(String,String)>>>,
-    //an array showing what client id corresponds to what index in the catalog
-    indexes: Vec<u32>,
-    //queue for accessing a file contains the id of the client that tries to access.
-    //instead of using a hash map there will be a second data structure containing the actively used files.
-    //an entry for file priority queue is of type (client_id,index_of(file) in active_files)
+    catalog: Arc<Mutex<Vec<(String,String,u32)>>>,
+    //active files are all the files that are opened and are being modified or read in the server 
     active_files: Arc<Mutex<Vec<FileWrapper<'a>>>>,
 }
 
@@ -57,12 +53,11 @@ impl<'a> Server<'a>{
     pub fn new() -> Server<'a>{
         Server{
             catalog: Arc::new(Mutex::new(Vec::with_capacity(10))),
-            indexes: Vec::with_capacity(10),
             active_files: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
-    pub fn add_new_catalog_entry(&mut self,tuple: (String,String)){
+    pub fn add_new_catalog_entry(&mut self,tuple: (String,String,u32)){
         let mut entry = self.catalog.lock().unwrap();
 
 
@@ -70,7 +65,7 @@ impl<'a> Server<'a>{
 
         //check if catalog contains the entry
         for i in catalog.iter(){
-            if *i.0 == tuple.0 && *i.1 == tuple.1{
+            if *i.0 == tuple.0 && *i.1 == tuple.1 && i.2 == tuple.2{
                 return;
             }
         }
@@ -131,6 +126,27 @@ mod tests {
     use std::fs;
     use super::*;
 
+
+    #[test]
+    fn new_catalog_entry_is_added(){
+        let mut server = Server::new(); 
+
+        server.add_new_catalog_entry((String::from("192.168.1.5"),String::from("8080"),2)); 
+        let catalog = &*server.catalog.lock().unwrap(); 
+        assert_eq!(catalog.len(),1); 
+    }
+
+    #[test]
+    fn already_existing_catalog_entry_is_not_added(){
+        let mut server = Server::new(); 
+
+        server.add_new_catalog_entry((String::from("192.168.1.5"),String::from("8080"),2)); 
+        server.add_new_catalog_entry((String::from("192.168.1.5"),String::from("8080"),2)); 
+        server.add_new_catalog_entry((String::from("192.168.1.5"),String::from("8080"),3)); 
+
+        let catalog = &*server.catalog.lock().unwrap(); 
+        assert_eq!(catalog.len(),2); 
+    }
 
     #[test]
     fn file_is_removed_from_active_files(){
