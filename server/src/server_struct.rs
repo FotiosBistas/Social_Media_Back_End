@@ -12,8 +12,19 @@ pub struct Server<'a>{
     //queue for accessing a file contains the id of the client that tries to access.
     //instead of using a hash map there will be a second data structure containing the actively used files.
     //an entry for file priority queue is of type (client_id,index_of(file) in active_files)
-    file_priority_queue: Arc<Mutex<VecDeque<(u32,u32)>>>,
-    active_files: Arc<Mutex<Vec<&'a File>>>,
+    active_files: Arc<Mutex<Vec<FileWrapper<'a>>>>,
+}
+
+///A wrapper struct containing the clients wanting to access the specific file. The data structure is a FIFO queue. 
+struct FileWrapper<'a>{
+    file: &'a File, 
+    client_queue: VecDeque<u32> 
+}
+
+impl<'a> FileWrapper<'a>{
+    fn new(file:&'a File) -> FileWrapper<'a>{
+        FileWrapper { file: file, client_queue: VecDeque::with_capacity(8) }
+    }
 }
 
 ///Helper trait used for comparing two files. Reduces boiler plate code. 
@@ -47,7 +58,6 @@ impl<'a> Server<'a>{
         Server{
             catalog: Arc::new(Mutex::new(Vec::with_capacity(10))),
             indexes: Vec::with_capacity(10),
-            file_priority_queue: Arc::new(Mutex::new(VecDeque::new())),
             active_files: Arc::new(Mutex::new(Vec::new())),
         }
     }
@@ -67,27 +77,53 @@ impl<'a> Server<'a>{
         catalog.push(tuple);
     }
 
-    pub fn add_to_priority_queue(&mut self,client_id:u32,file: &'a File){
-
+    ///Adds a file to the active queue and returns the index of the file added. 
+    pub fn add_file_to_active_files(&mut self,file: &'a File){
         let mut active_files = self.active_files.lock().unwrap();
         let mut active_files = &mut *active_files;
-        //
-        let index_of_file = active_files.iter().position(|x| x.is_equal(file).unwrap());
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(file).unwrap());
 
-        let mut file_priority_queue = self.file_priority_queue.lock().unwrap();
-        let mut file_priority_queue = &mut *file_priority_queue;
-
-        if index_of_file != None{
-            match file_priority_queue.iter().find(|x| x.0 == client_id){
-                Some(_) => return ,
-                None => file_priority_queue.push_front((client_id,index_of_file.unwrap() as u32)),
-            } 
-        }else{
-            active_files.push(file);
-            let index_of_file = active_files.iter().position(|x| x.is_equal(file).unwrap());
-            file_priority_queue.push_front((client_id,index_of_file.unwrap() as u32));
+        if index_of_file == None {
+            active_files.push(
+                FileWrapper::new(file)
+            ); 
         }
     }
+
+    pub fn remove_file_from_active_files(&mut self,file: &'a File){
+        let mut active_files = self.active_files.lock().unwrap();
+        let mut active_files = &mut *active_files;
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(file).unwrap());
+        if index_of_file != None {
+            active_files.remove(index_of_file.unwrap()); 
+        }
+    }
+
+    pub fn add_client_to_priority_queue(&mut self,client_id:u32,file: &'a File){
+        let mut active_files = self.active_files.lock().unwrap(); 
+        let mut active_files = &mut *active_files; 
+
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(file).unwrap()); 
+        if index_of_file != None{
+            let mut file_wrapper = active_files.get_mut(index_of_file.unwrap()).unwrap(); 
+            match file_wrapper.client_queue.iter().position(|x| *x == client_id){
+                None => file_wrapper.client_queue.push_back(client_id), 
+                Some(_) => return, 
+            }
+        } 
+    }
+
+    pub fn remove_client_from_priority_queue(&mut self,file: &'a File){
+        let mut active_files = self.active_files.lock().unwrap(); 
+        let mut active_files = &mut *active_files; 
+
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(file).unwrap()); 
+        if index_of_file != None{
+            let mut file_wrapper = active_files.get_mut(index_of_file.unwrap()).unwrap(); 
+            file_wrapper.client_queue.pop_front();
+        }
+    }
+
 }
 
 #[cfg(test)]
@@ -96,50 +132,75 @@ mod tests {
     use super::*;
 
 
-    
-
     #[test]
-    fn file_is_not_contained_and_will_be_added(){
-        
+    fn file_is_removed_from_active_files(){
         let mut server = Server::new();
+
         let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
             Ok(file) => file,
             Err(err) => panic!("Could not open file: {}",err),
         };
-        server.add_to_priority_queue(2,&file);
+
+        server.add_file_to_active_files(&file);
+        server.remove_file_from_active_files(&file); 
 
         let mut active_files = server.active_files.lock().unwrap(); 
-   
-        let mut file_priority_queue = server.file_priority_queue.lock().unwrap();
+        assert_eq!(active_files.len(),0);
+    }
 
+    #[test]
+    fn client_is_removed_from_queue(){
+        let mut server = Server::new();
+
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        };
+
+        server.add_file_to_active_files(&file);
+        server.add_client_to_priority_queue(2, &file); 
+        server.add_client_to_priority_queue(3, &file); 
+        server.add_client_to_priority_queue(4, &file);
+    }
+
+    #[test]
+    fn file_is_not_contained_and_will_be_added(){
+        let mut server = Server::new();
+
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        };
+
+        server.add_file_to_active_files(&file); 
+
+        let mut active_files = server.active_files.lock().unwrap(); 
         let active_files = &mut *active_files;
-        let file_priority_queue = &mut *file_priority_queue; 
+
         assert_eq!(active_files.len(),1);
-        assert_eq!(file_priority_queue.len(),1);
     }
 
 
     #[test]
     fn when_file_is_opened_twice_the_active_file_queue_stays_the_same(){
         let mut server = Server::new(); 
-        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
-            Ok(file) => file,
-            Err(err) => panic!("Could not open file: {}",err),
-        };        
-        server.add_to_priority_queue(2,&file);
-        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
-            Ok(file) => file,
-            Err(err) => panic!("Could not open file: {}",err),
-        };   
-        server.add_to_priority_queue(3,&file);
-        let mut active_files = server.active_files.lock().unwrap(); 
-   
-        let mut file_priority_queue = server.file_priority_queue.lock().unwrap();
 
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        }; 
+        server.add_file_to_active_files(&file); 
+
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        };  
+        server.add_file_to_active_files(&file);
+
+        let mut active_files = server.active_files.lock().unwrap(); 
         let active_files = &mut *active_files;
-        let file_priority_queue = &mut *file_priority_queue; 
+
         assert_eq!(active_files.len(),1);
-        assert_eq!(file_priority_queue.len(),2);
     }
 
     #[test]
@@ -148,17 +209,21 @@ mod tests {
         let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
             Ok(file) => file,
             Err(err) => panic!("Could not open file: {}",err),
-        };        
-        server.add_to_priority_queue(2,&file);
-        server.add_to_priority_queue(3,&file);
-        let mut active_files = server.active_files.lock().unwrap(); 
-   
-        let mut file_priority_queue = server.file_priority_queue.lock().unwrap();
+        };    
 
-        let active_files = &mut *active_files;
-        let file_priority_queue = &mut *file_priority_queue; 
-        assert_eq!(active_files.len(),1);
-        assert_eq!(file_priority_queue.len(),2);
+        server.add_file_to_active_files(&file); 
+        server.add_client_to_priority_queue(2,&file);
+        server.add_client_to_priority_queue(3,&file);
+
+        let mut active_files = server.active_files.lock().unwrap();
+        let active_files = &mut *active_files; 
+
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(&file).unwrap()); 
+        
+        let file_wrapper = active_files.get(index_of_file.unwrap()).unwrap(); 
+        
+
+        assert_eq!(file_wrapper.client_queue.len(),2);
     }
 
     #[test]
@@ -169,15 +234,18 @@ mod tests {
             Err(err) => panic!("Could not open file: {}",err),
         };        
         
-        server.add_to_priority_queue(2,&file);
-        server.add_to_priority_queue(2,&file);
-        let mut active_files = server.active_files.lock().unwrap(); 
-   
-        let mut file_priority_queue = server.file_priority_queue.lock().unwrap();
+        server.add_file_to_active_files(&file); 
+        server.add_client_to_priority_queue(2,&file);
+        server.add_client_to_priority_queue(2,&file);
 
-        let active_files = &mut *active_files;
-        let file_priority_queue = &mut *file_priority_queue; 
-        assert_eq!(active_files.len(),1);
-        assert_eq!(file_priority_queue.len(),1);
+        let mut active_files = server.active_files.lock().unwrap();
+        let active_files = &mut *active_files; 
+
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(&file).unwrap()); 
+        
+        let file_wrapper = active_files.get(index_of_file.unwrap()).unwrap(); 
+        
+
+        assert_eq!(file_wrapper.client_queue.len(),1);
     }
 }
