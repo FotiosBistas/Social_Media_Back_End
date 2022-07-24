@@ -177,6 +177,15 @@ mod tests {
         server.add_client_to_priority_queue(2, &file); 
         server.add_client_to_priority_queue(3, &file); 
         server.add_client_to_priority_queue(4, &file);
+        server.remove_client_from_priority_queue(&file); 
+        //check if client 2 is removed from the queue 
+        let mut active_files = server.active_files.lock().unwrap(); 
+        let mut active_files = &*active_files; 
+
+        let index_of_file = active_files.iter().position(|x| x.file.is_equal(&file).unwrap()); 
+        
+        let client_id = active_files.get(index_of_file.unwrap()).unwrap().client_queue.iter().find(|x| **x == 2); 
+        assert!(client_id == None)
     }
 
     #[test]
