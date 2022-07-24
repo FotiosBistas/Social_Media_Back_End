@@ -15,4 +15,7 @@ COPY . server/src
 #the server uses the port 8080 to listen to connections 
 EXPOSE 8080 
 
-CMD ["npm","start"]
+
+COPY main.exe /bin/ 
+
+CMD ["/bin/main.exe"]

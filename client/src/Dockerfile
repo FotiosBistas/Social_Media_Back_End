@@ -12,6 +12,8 @@ WORKDIR /client/src
 
 #if copy <src> <dest> src is left empty then it copies the curr dir
 COPY . client/src 
+COPY main.exe /bin/ 
 
+ENTRYPOINT ["/bin/main.exe"]
 
-CMD ["cargo","run"]
+CMD ["username","password"]
