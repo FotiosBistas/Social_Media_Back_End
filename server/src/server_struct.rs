@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::fs::File;
+use std::io::{BufRead, BufReader, Read};
 use std::ops::Index;
 use std::sync::{Arc, Mutex};
 
@@ -15,6 +16,31 @@ pub struct Server<'a>{
     active_files: Arc<Mutex<Vec<&'a File>>>,
 }
 
+///Helper trait used for comparing two files. Reduces boiler plate code. 
+trait EqualFile{
+    fn is_equal(&self,other: &File) -> Result<bool,std::io::Error>; 
+}
+
+
+impl EqualFile for File{
+    fn is_equal(&self,other: &File) -> Result<bool,std::io::Error> {
+
+        if other.metadata()?.len() != self.metadata()?.len() {
+            return Ok(false);
+        }
+
+        let f1 = BufReader::new(self); 
+        let f2 = BufReader::new(other); 
+
+        for (b1,b2) in f1.bytes().zip(f2.bytes()){
+            if b1? != b2? {
+                return Ok(false); 
+            }
+        }
+        
+        return Ok(true); 
+    }
+}
 
 impl<'a> Server<'a>{
     pub fn new() -> Server<'a>{
@@ -46,7 +72,7 @@ impl<'a> Server<'a>{
         let mut active_files = self.active_files.lock().unwrap();
         let mut active_files = &mut *active_files;
         //
-        let index_of_file = active_files.iter().position(|x| std::ptr::eq(*x,file));
+        let index_of_file = active_files.iter().position(|x| x.is_equal(file).unwrap());
 
         let mut file_priority_queue = self.file_priority_queue.lock().unwrap();
         let mut file_priority_queue = &mut *file_priority_queue;
@@ -58,7 +84,7 @@ impl<'a> Server<'a>{
             } 
         }else{
             active_files.push(file);
-            let index_of_file = active_files.iter().position(|x| std::ptr::eq(*x,file));
+            let index_of_file = active_files.iter().position(|x| x.is_equal(file).unwrap());
             file_priority_queue.push_front((client_id,index_of_file.unwrap() as u32));
         }
     }
@@ -69,6 +95,8 @@ mod tests {
     use std::fs;
     use super::*;
 
+
+    
 
     #[test]
     fn file_is_not_contained_and_will_be_added(){
@@ -88,6 +116,30 @@ mod tests {
         let file_priority_queue = &mut *file_priority_queue; 
         assert_eq!(active_files.len(),1);
         assert_eq!(file_priority_queue.len(),1);
+    }
+
+
+    #[test]
+    fn when_file_is_opened_twice_the_active_file_queue_stays_the_same(){
+        let mut server = Server::new(); 
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        };        
+        server.add_to_priority_queue(2,&file);
+        let file = match File::open("C:/Users/fotis/GitHub/Social_Media_Back_End/server/SocialGraph.txt"){
+            Ok(file) => file,
+            Err(err) => panic!("Could not open file: {}",err),
+        };   
+        server.add_to_priority_queue(3,&file);
+        let mut active_files = server.active_files.lock().unwrap(); 
+   
+        let mut file_priority_queue = server.file_priority_queue.lock().unwrap();
+
+        let active_files = &mut *active_files;
+        let file_priority_queue = &mut *file_priority_queue; 
+        assert_eq!(active_files.len(),1);
+        assert_eq!(file_priority_queue.len(),2);
     }
 
     #[test]
