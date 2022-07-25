@@ -3,5 +3,6 @@
 
 members = [
     "client",
-    "server"
+    "server",
+    "async_server"
 ]

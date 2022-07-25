@@ -1,0 +1,8 @@
+[package]
+name = "async_server"
+version = "0.1.0"
+edition = "2021"
+authors = ["Fotis Bistas"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"]}
